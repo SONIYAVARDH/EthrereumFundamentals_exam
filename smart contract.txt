@@ -1,0 +1,58 @@
+
+
+1) Write a Lottery Smart Contract made by usingSolidityand Remix IDE. 
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract Lottery {
+    address public manager;
+    address payable[] public players;
+
+    // Constructor
+    constructor() {
+        manager = msg.sender;
+    }
+
+    // Check if the sender has already entered
+    function alreadyEntered() private view returns(bool) {
+        for (uint i = 0; i < players.length; i++) {
+            if (players[i] == msg.sender) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Enter the lottery
+    function enter() public payable {
+        require(msg.sender != manager, "Manager cannot enter the lottery");
+        require(msg.value >= 1 ether, "Insufficient funds");
+        require(!alreadyEntered(), "Player already entered the lottery");
+        players.push(payable(msg.sender));
+    }
+
+    // Generate a pseudo-random number (not suitable for production)
+    function random() private view returns(uint) {
+        return uint(sha256(abi.encodePacked(block.prevrandao, block.number, players)));
+    }
+
+    // Pick a winner
+    function pickWinner() public restricted {
+        uint index = random() % players.length;
+        address contractAddress = address(this);
+        players[index].transfer(contractAddress.balance);
+        players = new address payable[](0);
+    }
+
+    // Get the list of players
+    function getPlayers() public view returns(address payable[] memory) {
+        return players;
+    }
+
+    // Modifier to restrict access to the manager
+    modifier restricted() {
+        require(msg.sender == manager, "Only manager can call this function");
+        _;
+    }
+}
